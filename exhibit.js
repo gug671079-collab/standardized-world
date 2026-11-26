@@ -177,66 +177,46 @@
 
   function arrangeComparison() {
     if (!result) return;
-    const { bounds, match } = result;
+    const { bounds } = result;
     const area = $("art-slot").getBoundingClientRect();
-    const ratio = Math.min(.68, area.width / bounds.width, area.height / bounds.height);
-    const x = area.left + (area.width - bounds.width * ratio) * .2 - bounds.x * ratio;
-    const y = area.top + (area.height - bounds.height * ratio) / 2 - bounds.y * ratio;
+    const frame = $("sketch-frame");
+    const labelW = $("frame-width").offsetWidth;
+    const topGap = $("frame-width").offsetHeight + 3;
+    const usableW = Math.max(1, area.width - $("frame-height").offsetWidth - 4);
+    const usableH = Math.max(1, area.height - topGap - 5);
+    const ratio = Math.min(.68, usableW / bounds.width, usableH / bounds.height);
+    const width = bounds.width * ratio, height = bounds.height * ratio;
+    const left = Math.max((usableW - width) * .22, (labelW - width) / 2, 0);
+    const top = topGap + (usableH - height) / 2;
+    Object.assign(frame.style, { left:px(left), top:px(top), width:px(width), height:px(height) });
+    frame.classList.toggle("thin-frame", height < 15);
+    const x = area.left + left - bounds.x * ratio;
+    const y = area.top + top - bounds.y * ratio;
     drawing.style.transform = "translate(" + px(x) + ", " + px(y) + ") scale(" + ratio + ")";
-
-    if ($("object-card").hidden || !match) return;
-    const g = match.geometry;
-    const width = scale.toPx(g.widthMm, calibration);
-    const height = scale.toPx(g.heightMm, calibration);
-    const field = $("outline-field");
-    const factor = Math.min(1, Math.max(1, field.clientWidth - 4) / width,
-      height ? Math.max(1, field.clientHeight - 4) / height : 1);
-    const contour = $("standard-object");
-    contour.style.width = px(width * factor);
-    contour.style.height = px(height ? height * factor : 14);
-    const limit = $("range-limit");
-    limit.hidden = !g.minMm;
-    limit.removeAttribute("style");
-    if (g.minMm) {
-      const small = px(scale.toPx(g.minMm, calibration) * factor);
-      if (g.shape === "circle") limit.style.width = limit.style.height = small;
-      else limit.style.left = small;
-    }
-    const label = factor < .999999 ? "缩小轮廓" : "原大轮廓";
-    $("outline-scale").textContent = label + (g.minMm ? " · 上下限" : "");
   }
 
   const cm = mm => Number((mm / 10).toFixed(2));
   function prepareCard(match) {
     const item = match?.item;
-    $("photo-reference").hidden = !item?.image_file;
-    $("outline-reference").hidden = !item;
-    $("standard-object").dataset.shape = item?.shape || "";
-    $("standard-object").setAttribute("aria-label", item ? item.view + "，" + match.sizeLabel : "");
     $("object-name").textContent = item?.name || "暂无相近规格";
     $("object-name").classList.toggle("long-name", (item?.name.length || 0) > 14);
-    $("object-size").textContent = match?.sizeLabel || "";
-    $("object-description").textContent = item ? [item.view, item.standard || item.dimension_basis].filter(Boolean).join(" · ") : "物件库暂时没有可供比较的记录。";
+    $("object-description").textContent = item ? window.ExhibitCatalog.describe(match) : "物件库暂时没有可供比较的记录。";
+    const photo = $("reference-photo");
+    $("photo-reference").hidden = !item?.image_file;
     if (!item) return;
     const m = match.measurement;
     if (m.shape === "line") {
-      $("art-size").textContent = cm(m.lengthMm) + " cm";
-      $("match-basis").textContent = "按两端距离比对 · 画稿已缩小";
+      $("match-basis").textContent = "按两端距离 " + cm(m.lengthMm) + " cm 匹配";
     } else if (m.shape === "circle") {
-      $("art-size").textContent = "约 " + cm(m.diameterMm) + " cm";
-      $("match-basis").textContent = "按原画直径比对 · 画稿已缩小";
+      $("match-basis").textContent = "按估算直径 " + cm(m.diameterMm) + " cm 匹配";
     } else if (m.shape === "rectangle") {
-      $("art-size").textContent = cm(m.sideXmm) + " × " + cm(m.sideYmm) + " cm";
-      $("match-basis").textContent = "按原画两边比对 · 画稿已缩小";
+      $("match-basis").textContent = "按原画两条边的长度匹配";
     }
     if (item.image_file) {
-      const scope = item.image_scope || "";
-      const photo = $("reference-photo");
+      photo.alt = item.name + (item.image_scope ? "，" + item.image_scope : "");
+      photo.style.setProperty("--photo-max-width", px(item.image_width_px * 1.65));
+      photo.style.setProperty("--photo-max-height", px(item.image_height_px * 1.65));
       photo.src = item.image_file;
-      photo.alt = item.name + "，" + scope;
-      $("photo-scope").title = scope;
-      $("photo-scope").textContent = /跨规格|非本规格|并非本规格|非逐规格|系列/.test(scope) ? "同系列参考图" :
-        /底纸|包装|卷材/.test(scope) ? "含包装或底纸的参考图" : "物件参考图";
     }
   }
 
@@ -249,8 +229,9 @@
     const bounds = { x: box.x - penWidth / 2, y: box.y - penWidth / 2, width: box.width + penWidth, height: box.height + penWidth };
     const widthMm = scale.toMm(bounds.width, calibration), heightMm = scale.toMm(bounds.height, calibration);
     result = { bounds, match: null };
-    $("art-size").textContent = cm(widthMm) + " × " + cm(heightMm) + " cm";
-    $("match-basis").textContent = "按原画宽高比对 · 画稿已缩小";
+    $("frame-width").textContent = "宽 " + cm(widthMm) + " cm";
+    $("frame-height").textContent = "高 " + cm(heightMm) + " cm";
+    $("match-basis").textContent = "按原画的宽和高匹配";
     show("result");
     $("search-status").hidden = false;
     arrangeComparison();

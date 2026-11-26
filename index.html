@@ -33,31 +33,22 @@
         <section id="comparison" hidden aria-label="画稿和匹配物件">
           <div id="sketch-note">
             <p class="sketch-label">你的原画</p>
-            <div id="art-slot" aria-hidden="true"></div>
-            <p id="art-size"></p>
+            <div id="art-slot">
+              <div id="sketch-frame">
+                <span id="frame-width"></span>
+                <span id="frame-height"></span>
+              </div>
+            </div>
             <p id="match-basis"></p>
           </div>
           <div id="card-slot">
             <p id="search-status" role="status">正在比对尺寸<span aria-hidden="true">…</span></p>
             <article id="object-card" hidden>
-              <header class="card-heading">
-                <p>尺寸相近的物件</p>
-                <h2 id="object-name"></h2>
-              </header>
-              <div class="card-figures">
-                <figure id="photo-reference">
-                  <div class="figure-field"><img id="reference-photo" alt="" draggable="false"></div>
-                  <figcaption id="photo-scope">参考图</figcaption>
-                </figure>
-                <figure id="outline-reference">
-                  <div class="figure-field" id="outline-field">
-                    <div id="standard-object" role="img"><span id="range-limit" hidden></span></div>
-                  </div>
-                  <figcaption id="outline-scale"></figcaption>
-                </figure>
-              </div>
+              <figure id="photo-reference">
+                <img id="reference-photo" alt="" draggable="false">
+              </figure>
               <div class="card-detail">
-                <p id="object-size"></p>
+                <h2 id="object-name"></h2>
                 <p id="object-description"></p>
               </div>
             </article>

@@ -204,5 +204,95 @@
     return { item, measurement, geometry, sizeLabel, basis, equivalentItems };
   }
 
-  window.ExhibitCatalog = { get entries() { return window.ExhibitItems || []; }, measure, match };
+  // Describe the museum's measurement in its original orientation and scope.
+  // Comparing can rotate a rectangle and can show the upper bound of a range.
+  const rectParts = {
+    "单枚标签轮廓": "单枚标签", "纸张正面": "一张纸", "单张纸面": "一张纸",
+    "封好后的信封平面": "封好后的信封", "封口后正面外沿": "封好后的信封",
+    "表壳正面（不含表带）": "单独量表壳时，正面轮廓", "侧面外接框（口宽×高）": "从侧面量蛋筒口的宽和蛋筒的高，外框",
+    "口部俯视外接框": "从上方量蛋筒口，外框", "展开平面外轮廓": "把书皮铺平，外轮廓",
+    "正面外接框（最大宽×总高）": "从正面量最宽处和总高，外框", "正面外接框（宽×高）": "正面外框",
+    "瓶身外径 × 瓶体总高": "从侧面量瓶身外径和总高，外框", "正面外接矩形（宽面）": "电池较宽的那一面",
+    "闭合机身俯视外接矩形": "合上电脑后，从正上方量机身，外框",
+    "显示器面板外接矩形；不含支架": "只量支架上方的显示器面板，外框",
+    "收拢状态机身正面外接矩形": "将打印机收拢后，机身的正面外框",
+    "机身俯视外接矩形": "从正上方量机身，外框"
+  };
+
+  const roundParts = {
+    "单枚标签轮廓": "一枚圆贴的直径", "管端外圆": "管口的外径",
+    "共同面外径": "硬币的直径", "币面外径": "硬币的直径", "正面外径": "硬币的直径",
+    "软木球头外圆": "软木球头的直径", "羽毛裙端外圆": "羽毛张开一端的直径",
+    "球体投影圆": "球的直径", "单球投影圆": "一颗球的直径", "冰球顶面": "冰球顶面的直径",
+    "蛋筒底外径": "蛋筒底部的外径", "蛋筒口外径": "蛋筒开口的外径",
+    "蛋挞俯视外径": "从上方量，蛋挞的外径", "最大外径（非杯口内径）": "从容器最宽处横量，外径",
+    "俯视面包外缘直径": "量到面包外缘为止，直径", "壶身最大外圆（不含手柄）": "单独量壶身最宽处，直径",
+    "标称直径": "从上方量，外缘直径", "俯视标称外径": "从上方量，外缘直径"
+  };
+
+  const lineParts = {
+    "表壳长边（不含表带）": "单独量表壳，长边", "蛋筒高度": "从筒底到筒口的高度",
+    "电池总高（轴向）": "沿电池中轴从一端量到另一端，长度", "电池总高": "电池两端之间的高度",
+    "钟体外径长度": "沿钟面中心横量，钟体的外径", "罐体/瓶体高度": "从容器底部到顶部的高度",
+    "总高度": "从底部到顶部的高度", "机身总宽度": "横向量机身，两侧之间的距离",
+    "机身总高度": "从机身底部量到顶部，高度", "收拢状态机身深度": "收拢机身后，从前到后的深度",
+    "俯视长轴长度": "沿长轴从一头量到另一头，长度", "长轴长度": "球体两个尖端之间的距离"
+  };
+
+  function describe(result) {
+    const item = result?.item;
+    if (!item) return "";
+    const { view, category, shape, dimension_basis: basis = "", specification_class: spec = "" } = item;
+    const approximate = /近似/.test(spec);
+    const nominal = /^(标称|公称)/.test(spec);
+    let lead = "", note = "";
+    if (category === "纸张" && /^ISO 216\b/.test(item.standard)) lead = "按 ISO 216 裁切，";
+    else if (category === "银行卡" && item.standard?.includes("ID-1")) lead = "按 ID-1 规格，";
+    else if (basis.includes("比赛规则")) lead = "按比赛规则，";
+    else if (spec === "具体型号" && !["不干胶标签", "电子钟"].includes(category)) lead = "按这款产品的规格，";
+    else if (basis.includes("冲印")) lead = "按这一冲印规格，";
+
+    let sentence;
+    if (shape === "rectangle") {
+      if (!positive(item.long_mm) || !positive(item.short_mm)) return "";
+      const long = fmtCm(item.long_mm), short = fmtCm(item.short_mm);
+      if (basis.includes("外径上限")) {
+        sentence = "封口后的标称高度是 " + long + " cm，罐身外径上限是 " + short + " cm。";
+      } else {
+        const part = rectParts[view] || (category === "纸币" ? "一张纸币" :
+          (view || "正面轮廓").replace("外接矩形", "外框").replace("单张相纸纸面", "一张相纸"));
+        const qualifier = approximate ? "约" : nominal ? "标称为" : "";
+        sentence = long === short
+          ? part + "的两边一样长，边长" + qualifier + " " + long + " cm。"
+          : part + "的长边" + qualifier + " " + long + " cm，短边" + qualifier + " " + short + " cm。";
+      }
+    } else if (shape === "circle" || shape === "line") {
+      const span = limits(item, shape === "circle" ? "diameter" : "length");
+      if (!span) return "";
+      const [lo, hi] = span;
+      const dimension = fmtCm(lo) + (lo === hi ? "" : " 至 " + fmtCm(hi)) + " cm";
+      const part = shape === "circle" ? roundParts[view] || (category === "电子钟" ? "钟体正面的外径" : "外缘直径")
+        : lineParts[view] || (view === "长边长度" ? "长边" : view === "短边长度" ? "短边" : "两端之间的距离");
+      if (basis.includes("周长÷π")) {
+        lead = "";
+        sentence = "比赛规则给出的是球的周长，换算成直径约为 " + dimension + "。";
+      } else if (basis.includes("外径上限") && shape === "line") {
+        sentence = "封好罐口后，从罐底到罐顶的标称高度是 " + dimension + "。";
+      } else {
+        const verb = approximate ? "约为 " : nominal ? "标称为 " : lo === hi ? "是 " : "为 ";
+        sentence = part + verb + dimension + "。";
+        if (basis.includes("成品有变化")) note = "实际做出的三明治会有长短差异。";
+      }
+    } else return "";
+
+    if (!note) {
+      if (category === "平板电脑" && item.image_scope?.includes("含键盘")) note = "图中配有键盘，这里只量平板本身。";
+      else if (item.image_type === "跨规格参考图") note = "配图借用其他规格作示意。";
+      else if (item.image_type === "官方系列示例") note = "配图展示的是同系列产品。";
+      else if (item.image_type === "官方包装图") note = "配图展示的是产品包装。";
+    }
+    return (lead + sentence + note).replace(/ {2,}/g, " ");
+  }
+
+  window.ExhibitCatalog = { get entries() { return window.ExhibitItems || []; }, measure, match, describe };
 })();
