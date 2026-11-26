@@ -204,14 +204,6 @@
     const photo = $("reference-photo");
     $("photo-reference").hidden = !item?.image_file;
     if (!item) return;
-    const m = match.measurement;
-    if (m.shape === "line") {
-      $("match-basis").textContent = "按两端距离 " + cm(m.lengthMm) + " cm 匹配";
-    } else if (m.shape === "circle") {
-      $("match-basis").textContent = "按估算直径 " + cm(m.diameterMm) + " cm 匹配";
-    } else if (m.shape === "rectangle") {
-      $("match-basis").textContent = "按原画两条边的长度匹配";
-    }
     if (item.image_file) {
       photo.alt = item.name + (item.image_scope ? "，" + item.image_scope : "");
       photo.style.setProperty("--photo-max-width", px(item.image_width_px * 1.65));
@@ -231,7 +223,6 @@
     result = { bounds, match: null };
     $("frame-width").textContent = "宽 " + cm(widthMm) + " cm";
     $("frame-height").textContent = "高 " + cm(heightMm) + " cm";
-    $("match-basis").textContent = "按原画的宽和高匹配";
     show("result");
     $("search-status").hidden = false;
     arrangeComparison();

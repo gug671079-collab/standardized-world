@@ -156,8 +156,7 @@ button:focus-visible, #viewport:focus-visible {
 #sketch-note {
   position: absolute; left: 8%; top: 13%; width: 31%;
 }
-#sketch-note p, #object-card p, #object-card h2, #object-card figure { margin: 0; }
-.sketch-label { color:#535049; font:450 clamp(16px,1.4vw,25px)/1.4 var(--sans); }
+#object-card p, #object-card h2, #object-card figure { margin: 0; }
 #art-slot { position:relative; width:100%; height:clamp(120px,31vh,340px); margin:18px 0 10px; }
 #sketch-frame {
   position:absolute; outline:1px dashed #a78d7d; outline-offset:4px;
@@ -171,7 +170,6 @@ button:focus-visible, #viewport:focus-visible {
 #frame-width { bottom:100%; padding-bottom:9px; left:50%; transform:translateX(-50%); }
 #frame-height { left:100%; top:50%; padding-left:11px; transform:translateY(-50%); }
 #sketch-frame.thin-frame #frame-height { top:100%; transform:none; }
-#sketch-note #match-basis { color:#625e55; font-size:clamp(14px,1.25vw,20px); line-height:1.5; }
 #card-slot {
   position: absolute; right: 7%; top: 8%; width: min(49%,760px); height: min(76%,750px);
   display: grid; place-items: stretch;
@@ -217,7 +215,6 @@ button:focus-visible, #viewport:focus-visible {
 @media (max-aspect-ratio: 4/5) {
   #sketch-note { left:7%; top:3%; width:86%; }
   #art-slot { width:88%; height:15vh; min-height:0; margin:10px 0 4px; }
-  #sketch-note #match-basis { margin-top:3px; font-size:14px; }
   #card-slot { top:32%; right:5%; width:88%; height:57%; }
   #object-card { padding:clamp(18px,5vw,32px); gap:14px; }
   #object-card h2 { font-size:clamp(24px,6.5vw,42px); }
