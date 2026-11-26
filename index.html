@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5ee">
+  <title>标准化的世界</title>
+  <link rel="stylesheet" href="exhibit.css">
+  <link rel="stylesheet" href="setup.css">
+  <script defer src="scale.js"></script>
+  <script defer src="data.js"></script>
+  <script defer src="catalog.js"></script>
+  <script defer src="setup.js"></script>
+  <script defer src="exhibit.js"></script>
+</head>
+<body>
+  <main id="exhibit" data-scene="idle">
+    <section id="poster" aria-labelledby="poster-title">
+      <div class="poster-composition">
+        <div class="reference-strip">
+          <div id="reference" class="reference">
+            <span class="reference-label"><span class="measure-number">10</span> cm<span id="calibration-note"> · 待校准</span></span>
+            <span class="rule" aria-hidden="true"></span>
+          </div>
+        </div>
+        <h1 id="poster-title" tabindex="-1">标准化的世界</h1>
+      </div>
+      <button type="button" class="action" id="start">开始画<span class="arrow" aria-hidden="true"></span></button>
+    </section>
+    <div id="viewport" hidden>
+      <div id="world">
+        <svg id="ink" xmlns="http://www.w3.org/2000/svg" aria-label="你的画布" role="img"><g id="drawing"></g></svg>
+        <div id="comparison" hidden>
+          <div id="art-caption"><span class="rule" aria-hidden="true"></span><span id="art-size"></span></div>
+          <div id="object-position">
+            <div id="standard-object" role="img"><span id="range-limit" hidden></span></div>
+          </div>
+          <div id="object-caption">
+            <div id="object-size"></div>
+            <h2 id="object-name" tabindex="-1"></h2>
+            <p id="object-description"></p>
+            <p id="match-basis"></p>
+            <figure id="photo-reference" hidden>
+              <img id="reference-photo" alt="" draggable="false">
+              <figcaption><span>参考图 · 非原大</span><span id="photo-scope"></span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+    <section id="drawing-ui" hidden aria-label="自由绘画">
+      <p id="prompt" tabindex="-1">在这里，画一样你熟悉的东西。</p>
+      <button type="button" class="action" id="finish" disabled>画好了<span class="arrow" aria-hidden="true"></span></button>
+    </section>
+    <div id="result-ui" hidden>
+      <p id="pan-help" hidden></p>
+      <button type="button" class="action" id="next">下一轮<span class="arrow" aria-hidden="true"></span></button>
+    </div>
+  </main>
+  <section id="calibration" hidden></section>
+</body>
+</html>
