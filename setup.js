@@ -37,7 +37,8 @@
           </div>
           <button type="button" class="setup-back" data-back>返回观众入口</button>
         </header>
-        <p class="setup-instructions">把实物尺贴近屏幕，将零刻度对准左端竖线的中心。调整线长，直到右端竖线的中心对准 10 cm 刻度。</p>
+        <p class="setup-instructions" data-instructions></p>
+        <div class="setup-workbench">
         <div class="setup-stage" data-stage>
           <div class="setup-line" data-line aria-hidden="true">
             <i class="setup-tick setup-tick-start" data-start><span>0</span></i>
@@ -53,6 +54,7 @@
             <button type="button" data-step="1" aria-label="加长 1 像素">+1</button>
             <button type="button" data-step="10" aria-label="加长 10 像素">+10</button>
           </div>
+        </div>
         </div>
         <div class="setup-footer">
           <div>
@@ -74,7 +76,11 @@
     const warning = get("warning");
     const status = get("status");
     const feedback = get("feedback");
-    value.value = state.calibrated ? formatPixels(state.pxPerMm * 100) : Math.max(1, Math.min(378, stage.clientWidth - 48));
+    const instructions = get("instructions");
+    const controls = panel.querySelector(".setup-control-row");
+    const footer = panel.querySelector(".setup-footer");
+    const portrait = window.matchMedia("(max-width: 640px) and (orientation: portrait)");
+    value.value = state.calibrated ? formatPixels(state.pxPerMm * 100) : "378";
     if (onSaved) {
       save.textContent = "已与实物尺对齐，保存并开始画";
     }
@@ -82,22 +88,42 @@
     function measuredLength() {
       const a = start.getBoundingClientRect();
       const b = end.getBoundingClientRect();
-      return (b.left + b.width / 2) - (a.left + a.width / 2);
+      return Math.hypot(b.left + b.width / 2 - a.left - a.width / 2,
+        b.top + b.height / 2 - a.top - a.height / 2);
     }
 
     function render() {
       const px = value.valueAsNumber;
       const isValid = Number.isFinite(px) && px >= 1;
-      // Keep space for the full ticks and their labels at both ends.
-      const fits = isValid && px <= stage.clientWidth - 48;
+      const vertical = portrait.matches;
+      const viewport = window.visualViewport;
+      const viewHeight = viewport?.height ?? window.innerHeight;
+      const viewWidth = viewport?.width ?? window.innerWidth;
+      const axis = vertical ? "vertical" : "horizontal";
+      if (panel.dataset.axis !== axis || !instructions.textContent) {
+        panel.dataset.axis = axis;
+        instructions.textContent = vertical
+          ? "竖放实物尺，微调线长，让上下两条横线的中心分别对准 0 和 10 cm。"
+          : "将实物尺横放，零刻度对准左端竖线中心。调整线长，直到右端竖线中心对准 10 cm。";
+        (vertical ? controls : footer).append(save);
+        if (vertical) controls.append(feedback);
+        else footer.after(feedback);
+      }
+      // Allow the longest line whose endpoints can be seen together.
+      stage.style.height = vertical
+        ? Math.min(Math.max(220, (isValid ? px : 378) + 50), viewHeight - 16) + "px" : "";
+      const available = vertical ? Math.min(stage.clientHeight, viewHeight) : Math.min(stage.clientWidth, viewWidth);
+      const fits = isValid && px <= available - 48;
       line.hidden = !fits;
       warning.hidden = fits;
       save.disabled = !fits;
       if (fits) {
-        line.style.width = px + "px";
+        line.style.width = vertical ? "2px" : px + "px";
+        line.style.height = vertical ? px + "px" : "2px";
       } else {
         warning.textContent = isValid
-          ? "参考线超出可见宽度。请加宽窗口或横置屏幕，直至两端完整可见。"
+          ? (vertical ? "屏幕可见高度不足。请收起键盘、扩大窗口，或换用能完整显示 10 cm 的屏幕。"
+            : "屏幕可见宽度不足。请加宽窗口或转动屏幕，让两端都能显示。")
           : "请输入大于或等于 1 的像素数。";
       }
       status.textContent = savedStatus(scale.read());
@@ -121,6 +147,16 @@
     save.addEventListener("click", function () {
       render();
       if (save.disabled) return;
+      if (portrait.matches) {
+        const viewport = window.visualViewport;
+        const top = viewport?.offsetTop ?? 0;
+        const bottom = top + (viewport?.height ?? window.innerHeight);
+        if (start.getBoundingClientRect().top < top || end.getBoundingClientRect().bottom > bottom) {
+          stage.scrollIntoView({ block: "center", behavior: "instant" });
+          feedback.textContent = "请核对上、下两个刻度，再点击保存。";
+          return;
+        }
+      }
       const length = measuredLength();
       if (!(length > 0)) return;
       try {

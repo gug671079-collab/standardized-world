@@ -4,7 +4,6 @@
   const $ = id => document.getElementById(id);
   const exhibit = $("exhibit");
   const viewport = $("viewport");
-  const world = $("world");
   const ink = $("ink");
   const drawing = $("drawing");
   const scale = window.ExhibitScale;
@@ -16,6 +15,7 @@
   let pen = null;
   let penWidth = 0;
   let result = null;
+  let revealTimer = 0;
 
   function show(sceneName) {
     scene = sceneName;
@@ -34,6 +34,9 @@
     const measured = calibration.calibrated;
     // Before setup this mark has no physical meaning. Keep its status attached.
     const width = measured ? scale.toPx(scale.referenceMm, calibration) : Math.min(300, innerWidth * .72);
+    const vertical = measured && width > innerWidth - 12 && width + 64 < innerHeight * .85;
+    $("poster").classList.toggle("vertical-reference", vertical);
+    $("poster").style.setProperty("--reference-length", px(width));
     $("reference").style.width = px(width);
     const left = $("poster-title").parentElement.getBoundingClientRect().left;
     $("reference").style.marginLeft = px(Math.max(6, Math.min(left, innerWidth - width - 6)));
@@ -46,12 +49,10 @@
     result = null;
     drawing.replaceChildren();
     drawing.style.removeProperty("transform");
-    world.style.removeProperty("width");
-    world.style.removeProperty("height");
-    viewport.scrollTo(0, 0);
-    viewport.removeAttribute("tabindex");
-    viewport.removeAttribute("aria-label");
-    $("comparison").classList.remove("entering");
+    clearTimeout(revealTimer);
+    $("object-card").hidden = true;
+    $("search-status").hidden = true;
+    $("next").hidden = true;
     $("finish").disabled = true;
     $("prompt").classList.remove("faded");
   }
@@ -174,107 +175,100 @@
   }
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => ink.addEventListener(type, endStroke));
 
-  function place(element, x, y, width) {
-    element.style.left = px(x);
-    element.style.top = px(y);
-    element.style.width = px(width);
+  function arrangeComparison() {
+    if (!result) return;
+    const { bounds, match } = result;
+    const area = $("art-slot").getBoundingClientRect();
+    const ratio = Math.min(.68, area.width / bounds.width, area.height / bounds.height);
+    const x = area.left + (area.width - bounds.width * ratio) * .2 - bounds.x * ratio;
+    const y = area.top + (area.height - bounds.height * ratio) / 2 - bounds.y * ratio;
+    drawing.style.transform = "translate(" + px(x) + ", " + px(y) + ") scale(" + ratio + ")";
+
+    if ($("object-card").hidden || !match) return;
+    const g = match.geometry;
+    const width = scale.toPx(g.widthMm, calibration);
+    const height = scale.toPx(g.heightMm, calibration);
+    const field = $("outline-field");
+    const factor = Math.min(1, Math.max(1, field.clientWidth - 4) / width,
+      height ? Math.max(1, field.clientHeight - 4) / height : 1);
+    const contour = $("standard-object");
+    contour.style.width = px(width * factor);
+    contour.style.height = px(height ? height * factor : 14);
+    const limit = $("range-limit");
+    limit.hidden = !g.minMm;
+    limit.removeAttribute("style");
+    if (g.minMm) {
+      const small = px(scale.toPx(g.minMm, calibration) * factor);
+      if (g.shape === "circle") limit.style.width = limit.style.height = small;
+      else limit.style.left = small;
+    }
+    const label = factor < .999999 ? "缩小轮廓" : "原大轮廓";
+    $("outline-scale").textContent = label + (g.minMm ? " · 上下限" : "");
   }
 
-  function arrangeComparison() {
-    const { bounds, match } = result;
+  const cm = mm => Number((mm / 10).toFixed(2));
+  function prepareCard(match) {
     const item = match?.item;
-    const viewW = viewport.clientWidth;
-    const viewH = viewport.clientHeight;
-    const margin = clamp(viewW * .085, 27, 170);
-    const gap = clamp(viewW * .082, 46, 164);
-    const geometry = match?.geometry;
-    const displayW = geometry ? scale.toPx(geometry.widthMm, calibration) : 0;
-    // A one-dimensional record has no physical thickness. The extra vertical
-    // space is solely for its two endpoint ticks.
-    const displayH = geometry?.shape === "line" ? 18 : geometry ? scale.toPx(geometry.heightMm, calibration) : 0;
-    const textW = clamp(viewW * .32, Math.min(255, viewW - 2 * margin), 570);
-    const rightW = Math.max(textW, displayW);
-    const leftW = Math.max(bounds.width, Math.min(150, textW), viewW - 2 * margin - gap - rightW);
-    const rightX = margin + leftW + gap;
-    const itemX = rightX + (rightW - displayW) / 2;
-    const textX = rightX + (rightW - textW) / 2;
-    const caption = $("object-caption");
-    caption.style.width = px(textW);
-    const captionH = caption.offsetHeight;
-    const belowImage = item ? 24 : 0;
-    const upper = Math.max(bounds.height / 2, displayH / 2);
-    const lower = Math.max(bounds.height / 2 + 67, displayH / 2 + belowImage + captionH);
-    const paddingY = clamp(viewH * .075, 28, 100);
-    const fullH = Math.max(viewH, upper + lower + 2 * paddingY);
-    const centerY = (fullH - upper - lower) / 2 + upper;
-    const artX = margin + (leftW - bounds.width) / 2;
-    const artY = centerY - bounds.height / 2;
-    const fullW = rightX + rightW + margin;
-    world.style.width = px(Math.ceil(fullW));
-    world.style.height = px(Math.ceil(fullH));
-    drawing.style.transform = "translate(" + px(artX - bounds.x) + ", " + px(artY - bounds.y) + ")";
-    place($("art-caption"), artX, artY + bounds.height + 17, bounds.width);
-    place($("object-position"), itemX, centerY - displayH / 2, displayW);
-    $("object-position").style.height = px(displayH);
-    const limit = $("range-limit");
-    limit.hidden = !geometry?.minMm;
-    if (!limit.hidden) {
-      const min = px(scale.toPx(geometry.minMm, calibration));
-      if (geometry.shape === "circle") {
-        limit.style.width = limit.style.height = min;
-        limit.style.removeProperty("left");
-      } else {
-        limit.style.removeProperty("width");
-        limit.style.removeProperty("height");
-        limit.style.left = min;
-      }
+    $("photo-reference").hidden = !item?.image_file;
+    $("outline-reference").hidden = !item;
+    $("standard-object").dataset.shape = item?.shape || "";
+    $("standard-object").setAttribute("aria-label", item ? item.view + "，" + match.sizeLabel : "");
+    $("object-name").textContent = item?.name || "暂无相近规格";
+    $("object-name").classList.toggle("long-name", (item?.name.length || 0) > 14);
+    $("object-size").textContent = match?.sizeLabel || "";
+    $("object-description").textContent = item ? [item.view, item.standard || item.dimension_basis].filter(Boolean).join(" · ") : "物件库暂时没有可供比较的记录。";
+    if (!item) return;
+    const m = match.measurement;
+    if (m.shape === "line") {
+      $("art-size").textContent = cm(m.lengthMm) + " cm";
+      $("match-basis").textContent = "按两端距离比对 · 画稿已缩小";
+    } else if (m.shape === "circle") {
+      $("art-size").textContent = "约 " + cm(m.diameterMm) + " cm";
+      $("match-basis").textContent = "按原画直径比对 · 画稿已缩小";
+    } else if (m.shape === "rectangle") {
+      $("art-size").textContent = cm(m.sideXmm) + " × " + cm(m.sideYmm) + " cm";
+      $("match-basis").textContent = "按原画两边比对 · 画稿已缩小";
     }
-    place(caption, textX, centerY + displayH / 2 + belowImage, textW);
-    const horizontal = fullW > viewW + 1;
-    const vertical = fullH > viewH + 1;
-    $("pan-help").hidden = !(horizontal || vertical);
-    $("pan-help").textContent = horizontal && vertical ? "滑动画面，原大对照" : horizontal ? "左右滑动，原大对照" : "上下滑动，原大对照";
+    if (item.image_file) {
+      const scope = item.image_scope || "";
+      const photo = $("reference-photo");
+      photo.src = item.image_file;
+      photo.alt = item.name + "，" + scope;
+      $("photo-scope").title = scope;
+      $("photo-scope").textContent = /跨规格|非本规格|并非本规格|非逐规格|系列/.test(scope) ? "同系列参考图" :
+        /底纸|包装|卷材/.test(scope) ? "含包装或底纸的参考图" : "物件参考图";
+    }
   }
 
   onAction($("finish"), () => {
     if (scene !== "draw" || pen || !strokes.length) return;
     const current = scale.read();
     if (!current.calibrated || current.pxPerMm !== calibration.pxPerMm) return idle();
+    // Take all measurements in drawing coordinates, before moving the same paths.
     const box = drawing.getBBox();
     const bounds = { x: box.x - penWidth / 2, y: box.y - penWidth / 2, width: box.width + penWidth, height: box.height + penWidth };
-    const widthMm = scale.toMm(bounds.width, calibration);
-    const heightMm = scale.toMm(bounds.height, calibration);
-    const match = window.ExhibitCatalog.match({ calibrated: true, widthMm, heightMm, strokes,
-      boundsPx: bounds, strokeWidthPx: penWidth, pxPerMm: calibration.pxPerMm });
-    result = { bounds, match };
-    const item = match?.item;
-    $("art-size").textContent = "画稿宽 " + (widthMm / 10).toFixed(2) + " cm";
-    $("object-position").hidden = !item;
-    $("standard-object").dataset.shape = match?.geometry.shape || "";
-    $("standard-object").setAttribute("aria-label", item ? item.view + "，" + match.sizeLabel : "");
-    $("object-size").textContent = match?.sizeLabel || "";
-    $("object-name").textContent = item?.name || "暂无可对照的规格";
-    $("object-name").classList.toggle("long-name", (item?.name.length || 0) > 12);
-    if (item) {
-      const source = item.standard || item.dimension_basis;
-      $("object-description").textContent = "图中量的是" + item.view + "。" + (source ? "规格依据为" + source + "。" : "");
-    } else {
-      $("object-description").textContent = "这次保留了你的画稿和实测宽度。";
-    }
-    $("match-basis").textContent = match?.basis || "";
-    $("photo-reference").hidden = !item?.image_file;
-    if (item?.image_file) {
-      $("reference-photo").src = item.image_file;
-      $("reference-photo").alt = item.name + "的参考图";
-      $("photo-scope").textContent = item.image_scope || "";
-    }
+    const widthMm = scale.toMm(bounds.width, calibration), heightMm = scale.toMm(bounds.height, calibration);
+    result = { bounds, match: null };
+    $("art-size").textContent = cm(widthMm) + " × " + cm(heightMm) + " cm";
+    $("match-basis").textContent = "按原画宽高比对 · 画稿已缩小";
     show("result");
-    viewport.tabIndex = 0;
-    viewport.setAttribute("aria-label", "画稿与标准物原大对照，可滚动查看");
-    viewport.scrollTo(0, 0);
+    $("search-status").hidden = false;
     arrangeComparison();
-    $("comparison").classList.add("entering");
-    $("next").focus({ preventScroll: true });
+    const frozen = result;
+    requestAnimationFrame(() => {
+      if (result !== frozen) return;
+      frozen.match = window.ExhibitCatalog.match({ calibrated: true, widthMm, heightMm, strokes,
+        boundsPx: bounds, strokeWidthPx: penWidth, pxPerMm: calibration.pxPerMm });
+      prepareCard(frozen.match);
+      revealTimer = setTimeout(() => {
+        if (result !== frozen) return;
+        $("search-status").hidden = true;
+        $("object-card").hidden = false;
+        $("next").hidden = false;
+        arrangeComparison();
+        $("next").focus({ preventScroll: true });
+      }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 680);
+    });
   });
 
   $("reference-photo").addEventListener("error", () => {

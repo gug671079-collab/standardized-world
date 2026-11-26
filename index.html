@@ -23,29 +23,46 @@
             <span class="rule" aria-hidden="true"></span>
           </div>
         </div>
-        <h1 id="poster-title" tabindex="-1">标准化的世界</h1>
+        <h1 id="poster-title" tabindex="-1"><span>标准化</span><span>的世界</span></h1>
       </div>
       <button type="button" class="action" id="start">开始画<span class="arrow" aria-hidden="true"></span></button>
     </section>
     <div id="viewport" hidden>
       <div id="world">
         <svg id="ink" xmlns="http://www.w3.org/2000/svg" aria-label="你的画布" role="img"><g id="drawing"></g></svg>
-        <div id="comparison" hidden>
-          <div id="art-caption"><span class="rule" aria-hidden="true"></span><span id="art-size"></span></div>
-          <div id="object-position">
-            <div id="standard-object" role="img"><span id="range-limit" hidden></span></div>
-          </div>
-          <div id="object-caption">
-            <div id="object-size"></div>
-            <h2 id="object-name" tabindex="-1"></h2>
-            <p id="object-description"></p>
+        <section id="comparison" hidden aria-label="画稿和匹配物件">
+          <div id="sketch-note">
+            <p class="sketch-label">你的原画</p>
+            <div id="art-slot" aria-hidden="true"></div>
+            <p id="art-size"></p>
             <p id="match-basis"></p>
-            <figure id="photo-reference" hidden>
-              <img id="reference-photo" alt="" draggable="false">
-              <figcaption><span>参考图 · 非原大</span><span id="photo-scope"></span></figcaption>
-            </figure>
           </div>
-        </div>
+          <div id="card-slot">
+            <p id="search-status" role="status">正在比对尺寸<span aria-hidden="true">…</span></p>
+            <article id="object-card" hidden>
+              <header class="card-heading">
+                <p>尺寸相近的物件</p>
+                <h2 id="object-name"></h2>
+              </header>
+              <div class="card-figures">
+                <figure id="photo-reference">
+                  <div class="figure-field"><img id="reference-photo" alt="" draggable="false"></div>
+                  <figcaption id="photo-scope">参考图</figcaption>
+                </figure>
+                <figure id="outline-reference">
+                  <div class="figure-field" id="outline-field">
+                    <div id="standard-object" role="img"><span id="range-limit" hidden></span></div>
+                  </div>
+                  <figcaption id="outline-scale"></figcaption>
+                </figure>
+              </div>
+              <div class="card-detail">
+                <p id="object-size"></p>
+                <p id="object-description"></p>
+              </div>
+            </article>
+          </div>
+        </section>
       </div>
     </div>
     <section id="drawing-ui" hidden aria-label="自由绘画">
@@ -53,7 +70,6 @@
       <button type="button" class="action" id="finish" disabled>画好了<span class="arrow" aria-hidden="true"></span></button>
     </section>
     <div id="result-ui" hidden>
-      <p id="pan-help" hidden></p>
       <button type="button" class="action" id="next">下一轮<span class="arrow" aria-hidden="true"></span></button>
     </div>
   </main>

@@ -187,3 +187,90 @@
   margin-top: 14px;
   font-weight: 600;
 }
+
+#calibration[data-axis="vertical"] .setup-inner {
+  padding: 16px clamp(10px, 4vw, 24px);
+}
+
+#calibration[data-axis="vertical"] .setup-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+#calibration[data-axis="vertical"] h1 {
+  font-size: clamp(20px, 6vw, 28px);
+}
+
+#calibration[data-axis="vertical"] .setup-back {
+  padding-inline: 9px;
+  font-size: 14px;
+}
+
+#calibration[data-axis="vertical"] .setup-instructions {
+  margin: 14px 0;
+}
+
+#calibration[data-axis="vertical"] .setup-workbench {
+  display: grid;
+  grid-template-columns: minmax(86px, 1fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: clamp(8px, 3vw, 20px);
+}
+
+#calibration[data-axis="vertical"] .setup-stage {
+  min-height: 0;
+}
+
+#calibration[data-axis="vertical"] .setup-tick {
+  left: 50%;
+  width: 32px;
+  height: 2px;
+}
+
+#calibration[data-axis="vertical"] .setup-tick-start { top: 0; }
+#calibration[data-axis="vertical"] .setup-tick-end { top: 100%; }
+
+#calibration[data-axis="vertical"] .setup-tick span {
+  left: 100%;
+  top: 50%;
+  padding: 0 0 0 3px;
+  transform: translateY(-50%);
+  font-size: 12px;
+}
+
+#calibration[data-axis="vertical"] .setup-control-row {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+}
+
+#calibration[data-axis="vertical"] .setup-number input {
+  width: min(100%, 5.4em);
+}
+
+#calibration[data-axis="vertical"] .setup-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+#calibration[data-axis="vertical"] .setup-steps button {
+  padding-inline: 5px;
+}
+
+#calibration[data-axis="vertical"] .setup-range-warning {
+  padding: 8px;
+  font-size: 14px;
+}
+
+#calibration[data-axis="vertical"] .setup-footer {
+  margin-top: 16px;
+}
+
+#calibration[data-axis="vertical"] .setup-feedback {
+  margin: 0;
+  font-size: 14px;
+}
+
+.setup-feedback:empty { display: none; }
